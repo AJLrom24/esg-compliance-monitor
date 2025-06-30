@@ -1,28 +1,36 @@
 import streamlit as st
+from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.chains import RetrievalQA
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
-# --- Load API Key from Streamlit Secrets ---
+# App title
+st.set_page_config(page_title="🌱 Sustainability / ESG InfoBot")
+st.title("🌱 Sustainability / ESG InfoBot")
+st.write("Ask me about Sustainability, ESG reports, or regulatory documents.")
+
+# Load OpenAI API key from Streamlit Secrets
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
-# --- Set up embeddings and vectorstore ---
-PERSIST_DIR = "vectorstore/"
+# Initialize embeddings and LLM
 embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+llm = ChatOpenAI(model="gpt-4", openai_api_key=openai_api_key)
+
+# Load vectorstore
+PERSIST_DIR = "vectorstore/"
 db = FAISS.load_local(PERSIST_DIR, embeddings, allow_dangerous_deserialization=True)
 
-# --- Initialize retriever and LLM chain ---
+# Set up retrieval QA chain
 retriever = db.as_retriever(search_kwargs={"k": 4})
-llm = ChatOpenAI(model="gpt-4", openai_api_key=openai_api_key)
 qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="Sustainability / ESG InfoBot", page_icon="🌱")
-st.title("🌱 Sustainability / ESG InfoBot")
-st.write("Ask me about sustainability topics, ESG reports, or regulatory documents.")
-
+# Query input
 query = st.text_input("Enter your question:")
 if query:
     with st.spinner("Thinking..."):
-        response = qa_chain.run(query)
-        st.success(response)
+        try:
+            response = qa_chain.run(query)
+            st.success(response)
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+
