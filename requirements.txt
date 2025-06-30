@@ -6,4 +6,3 @@ openai
 faiss-cpu
 pypdf
 python-dotenv
-EOF
