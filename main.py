@@ -19,8 +19,8 @@ llm = ChatOpenAI(model="gpt-4")
 qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
 # Streamlit UI
-st.title("🧠 ESG Compliance Assistant")
-st.write("Ask me about sustainability, ESG reports, or regulatory documents.")
+st.title("🌱 Sustainability / ESG InfoBot")
+st.write("Ask me about Sustainability, ESG reports, or regulatory documents.")
 
 query = st.text_input("Enter your question:")
 if query:
