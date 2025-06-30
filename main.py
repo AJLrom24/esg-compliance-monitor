@@ -1,34 +1,31 @@
-import os
+import streamlit as st
+from langchain_community.vectorstores import FAISS
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain.chains import RetrievalQA
 from dotenv import load_dotenv
-from string import Template
-from utils.openai_client import summarize_text
-from utils.email_sender import send_email
-from fetchers.uk_fetcher import fetch_uk_updates
-from fetchers.france_fetcher import fetch_france_updates
-from fetchers.uae_fetcher import fetch_uae_updates
+import os
 
+# Load environment variables (make sure your .env has OPENAI_API_KEY)
 load_dotenv()
 
-def run_digest():
-    updates_by_mu = {
-        'UKIA': fetch_uk_updates(),
-        'Gallia': fetch_france_updates(),
-        'Middle East': fetch_uae_updates(),
-    }
+# Initialize vector store
+PERSIST_DIR = "vectorstore/"
+embeddings = OpenAIEmbeddings()
+db = FAISS.load_local(PERSIST_DIR, embeddings, allow_dangerous_deserialization=True)
 
-    content_block = ""
-    for mu, updates in updates_by_mu.items():
-        content_block += f"<h2>{mu}</h2>"
-        for update in updates:
-            summary = summarize_text(update['content'])
-            content_block += f"<p><strong>{update['title']}</strong><br>{summary}</p>"
+# Set up retrieval-based QA chain
+retriever = db.as_retriever(search_kwargs={"k": 4})
+llm = ChatOpenAI(model="gpt-4")
+qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-    with open("templates/email_template.html", "r") as file:
-        template = Template(file.read())
+# Streamlit UI
+st.title("🧠 ESG Compliance Assistant")
+st.write("Ask me about sustainability, ESG reports, or regulatory documents.")
 
-    digest_html = template.safe_substitute(DIGEST_CONTENT=content_block)
-    send_email("ESG Compliance Digest – EMEA Update", digest_html)
+query = st.text_input("Enter your question:")
+if query:
+    with st.spinner("Thinking..."):
+        response = qa_chain.run(query)
+        st.success(response)
 
-if __name__ == "__main__":
-    run_digest()
 
